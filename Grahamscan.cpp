@@ -90,7 +90,7 @@ void userInput(){
 	int n,x,y;
 	vector<pair<int,int> > p;
 	ifstream in;
-	in.open("100.txt");
+	in.open("test1.txt");
 	in>>n;
 	for(int i = 0;i < n;i++){
 		in>>x>>y;
