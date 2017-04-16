@@ -1,160 +1,121 @@
-#include <iostream>
-#include <stack>
-#include <stdlib.h>
+#include<bits/stdc++.h>
+#define pb push_back
+#define mp make_pair
+#define x first
+#define y second
+
 using namespace std;
+pair<int,int> p0;
 
-struct Point
-{
-    int x, y;
-};
-
-                                                        // A globle point needed for  sorting points with reference
-                                                        // to  the first point Used in compare function of qsort()
-Point p0;
-
-                                                        // A utility function to find next to top in a stack
-Point nextToTop(stack<Point> &S)
-{
-    Point p = S.top();
-    S.pop();
-    Point res = S.top();
-    S.push(p);
-    return res;
+int order(pair<int,int> a, pair<int,int> b, pair<int,int> c){
+	int det = (b.x-a.x)*(c.y-b.y) - (c.x-b.x)*(b.y-a.y);
+	if(det == 0) return 0;           //points are collinear
+	if(det < 0)  return 1;           //a,b,c are clockwise 
+	return 2;						 //a,b,c are anti-clockwise
 }
 
-                                                        // A utility function to swap two points
-int swap(Point &p1, Point &p2)
-{
-    Point temp = p1;
-    p1 = p2;
-    p2 = temp;
+bool comp(pair<int,int> a, pair<int,int> b){
+	int f = order(p0,a,b);
+	
+	if(f == 0)  return (((p0.x - a.x)*(p0.x - a.x)+(p0.y - a.y)*(p0.y - a.y)) <= ((p0.x - b.x)*(p0.x - b.x)+(p0.y - b.y)*(p0.y - b.y)));
+	
+	return (f == 1)?0:1;
 }
 
-                                                        // A utility function to return square of distance
-                                                        // between p1 and p2
-int distSq(Point p1, Point p2)
-{
-    return (p1.x - p2.x)*(p1.x - p2.x) +
-          (p1.y - p2.y)*(p1.y - p2.y);
+pair<int,int> next2top(stack<pair<int,int> > &s){
+	pair<int,int> t = s.top();
+	s.pop();
+	pair<int,int> item = s.top();
+	s.push(t);
+	return item;
 }
 
-                                                        // To find orientation of ordered triplet (p, q, r).
-                                                        // The function returns following values
-                                                        // 0 --> p, q and r are colinear
-                                                        // 1 --> Clockwise
-                                                        // 2 --> Counterclockwise
-int orientation(Point p, Point q, Point r)
-{
-    int val = (q.y - p.y) * (r.x - q.x) -
-              (q.x - p.x) * (r.y - q.y);
-
-    if (val == 0) return 0;                         // colinear
-    return (val > 0)? 1: 2;                         // clock or counterclock wise
+void convexHull(vector<pair<int,int> > p){
+	int n = p.size();
+	vector<pair<int,int> > res;
+	
+	//Find the bottommost point
+	int id = 0;
+	for(int i = 1;i < n;i++){
+		if(p[i].y < p[id].y) id = i;
+		else if(p[i].y == p[id].y && p[i].x < p[id].x) id = i;
+	}
+	swap(p[0],p[id]);
+	p0 = p[0];
+	
+	sort(p.begin()+1,p.end(),comp);
+	
+	//Remove collinear points
+	int j = 1;
+	for(int i = 1;i < n-1;i++){
+		if(order(p0,p[i],p[i+1]) != 0)  p[j++] = p[i];
+	}
+	p[j++] = p[n-1];
+	
+	if(j < 3) return;
+	
+	stack<pair<int,int> > s;
+	s.push(p[0]);s.push(p[1]);s.push(p[2]);
+	for(int i = 3;i < j;i++){
+		while(order(next2top(s),s.top(),p[i]) != 2) s.pop();
+		s.push(p[i]);
+	}
+	
+	//Result
+	int count = 0;
+	cout<<"Points on the convex hull in clockwise order are:\n";
+	while(!s.empty()){
+		cout<<"("<<s.top().x<<","<<s.top().y<<")\t";
+		count++;
+		s.pop();
+	}
+	cout<<endl<<"Minimum no. of points required to construct the hull are: "<<count<<endl;
 }
 
-                                                    // A function used by library function qsort() to sort an array of
-                                                    // points with respect to the first point
-int compare(const void *vp1, const void *vp2)
-{
-   Point *p1 = (Point *)vp1;
-   Point *p2 = (Point *)vp2;
-
-                                                    // Find orientation
-   int o = orientation(p0, *p1, *p2);
-   if (o == 0)
-     return (distSq(p0, *p2) >= distSq(p0, *p1))? -1 : 1;
-
-   return (o == 2)? -1: 1;
+void testInput(){
+	vector<pair<int,int> > p;
+	
+	p.pb(mp(1,1));
+	p.pb(mp(2,2));
+	p.pb(mp(0,3));
+	p.pb(mp(2,1));
+	p.pb(mp(3,0));
+	p.pb(mp(0,0));
+	p.pb(mp(3,3));
+	
+	convexHull(p);
 }
 
-                                                    // Prints convex hull of a set of n points.
-void convexHull(Point points[], int n)
-{
-                                                        // Find the bottommost point
-   int ymin = points[0].y, min = 0;
-   for (int i = 1; i < n; i++)
-   {
-     int y = points[i].y;
-
-                                                     // Pick the bottom-most or chose the left
-                                                     // most point in case of tie
-     if ((y < ymin) || (ymin == y &&
-         points[i].x < points[min].x))
-        ymin = points[i].y, min = i;
-   }
-
-                                                            // Place the bottom-most point at first position
-   swap(points[0], points[min]);
-
-                                                           // Sort n-1 points with respect to the first point.
-                                                           // A point p1 comes before p2 in sorted ouput if p2
-                                                           // has larger polar angle (in counterclockwise
-                                                           // direction) than p1
-   p0 = points[0];
-   qsort(&points[1], n-1, sizeof(Point), compare);
-
-                                                       // If two or more points make same angle with p0,
-                                                       // Remove all but the one that is farthest from p0
-                                                       // Remember that, in above sorting, our criteria was
-                                                       // to keep the farthest point at the end when more than
-                                                       // one points have same angle.
-   int m = 1;                                            // Initialize size of modified array
-   for (int i=1; i<n; i++)
-   {
-                                                       // Keep removing i while angle of i and i+1 is same
-                                                       // with respect to p0
-       while (i < n-1 && orientation(p0, points[i],
-                                    points[i+1]) == 0)
-          i++;
-
-
-       points[m] = points[i];
-       m++;                                             // Update size of modified array
-   }
-
-                                                   // If modified array of points has less than 3 points,
-                                                   // convex hull is not possible
-   if (m < 3) return;
-
-                                                   // Create an empty stack and push first three points
-                                                   // to it.
-   stack<Point> S;
-   S.push(points[0]);
-   S.push(points[1]);
-   S.push(points[2]);
-
-                                                            // Process remaining n-3 points
-   for (int i = 3; i < m; i++)
-   {
-                                                              // Keep removing top while the angle formed by
-                                                              // points next-to-top, top, and points[i] makes
-                                                              // a non-left turn
-      while (orientation(nextToTop(S), S.top(), points[i]) != 2)
-         S.pop();
-      S.push(points[i]);
-   }
-
-                                                                // Now stack has the output points, print contents of stack
-   while (!S.empty())
-   {
-       Point p = S.top();
-       cout << "(" << p.x << ", " << p.y <<")" << endl;
-       S.pop();
-   }
+void userInput(){
+	int n,x,y;
+	vector<pair<int,int> > p;
+	ifstream in;
+	in.open("100.txt");
+	in>>n;
+	for(int i = 0;i < n;i++){
+		in>>x>>y;
+		p.pb(mp(x,y));
+	}
+	
+	//Special Case: All points on convex hull
+	/*
+	cout<<"Enter input size: ";
+	cin>>n;
+	for(int i = 1;i < n;i++){
+		p.pb(mp(i,i));
+	}
+	p.pb(mp(0,1));
+	*/
+	convexHull(p);
 }
 
-                                                                       
-int main()
-{
-    int total;
-    cout<<"number of points "<<endl;
-    cin>>total;
-    cout<<"enter the points"<<endl;
-    Point points[total];
-    for(int i=0;i<total;i++)
-    {
-        cin>>points[i].x>>points[i].y;
-    }
-    convexHull(points, total);
-    return 0;
+int main(){
+	clock_t startTime = clock();
+	
+	userInput();
+	//testInput();
+	
+	double exeTime = double( clock() - startTime ) / (double)CLOCKS_PER_SEC;
+	cout<<endl<<exeTime<<" seconds."<<endl;
+	return 0;
 }
